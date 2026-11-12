@@ -1,0 +1,38 @@
+name: Verify stripped archives
+
+on:
+  pull_request:
+  push:
+    branches:
+      - 'hisy/**'
+    tags:
+      - '*hisy*'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Archives are upstream minus bitcode, and link with current Go
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Rebuild the archives from the upstream tag
+        run: hisy/strip-bitcode.sh
+
+      - name: Committed archives match the rebuild
+        run: git diff --exit-code --stat -- deps/
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.26.11'
+          cache: false
+
+      - name: Run tests
+        run: go test -count=1 ./...
